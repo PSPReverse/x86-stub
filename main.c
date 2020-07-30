@@ -25,8 +25,29 @@
  */
 
 
-/** The PSP stub mailbox area. */
-#define PSP_STUB_MBX_START              0x9c00000
+#include <common/cdefs.h>
+#include <common/types.h>
+
+#include <x86/x86-stub.h>
+
+
+/**
+ * Local memcpy variant.
+ *
+ * @returns nothing.
+ * @param   pvDst                   Where to copy to.
+ * @param   pvSrc                   What to copy.
+ * @param   cbCopy                  How many bytes to copy.
+ */
+static void x86StubMemcpy(void *pvDst, const void *pvSrc, size_t cbCopy)
+{
+    uint8_t *pbDst = (uint8_t *)pbDst;
+    const uint8_t *pbSrc = (uint8_t *)pvSrc;
+
+    while (cbCopy--)
+        *pbDst++ = *pbSrc++;
+}
+
 
 /**
  * The main C entry point.
@@ -35,6 +56,94 @@
  */
 void _c_start(void)
 {
-    for (;;);
+    PX86STUBMBX pMbx = (PX86STUBMBX)(uintptr_t)X86_STUB_MBX_START;
+
+    pMbx->u32MagicReqResp = X86STUB_MBX_MAGIC_READY;
+
+    for (;;)
+    {
+        /* Wait for a new request to arrive. */
+        while (pMbx->u32MagicReqResp != X86STUB_MBX_MAGIC_REQ);
+
+        /* Copy the request into a local stack buffer. */
+        X86STUBMBX Req = { 0 };
+        x86StubMemcpy(&Req, pMbx, sizeof(Req));
+
+        switch (Req.enmReq)
+        {
+            case X86STUBMBXREQ_IOPORT_READ:
+            {
+                uint32_t u32Data = 0;
+                uint16_t IoPort = (uint16_t)Req.u.IoPort.u32IoPort;
+
+                switch (Req.u.IoPort.cbAccess)
+                {
+                    case 1:
+                    {
+                        uint8_t bVal = 0;
+                        asm volatile ("inb %0, %1": : "a"(bVal), "Nd"(IoPort));
+                        u32Data = bVal;
+                        break;
+                    }
+                    case 2:
+                    {
+                        uint16_t u16Val = 0;
+                        asm volatile ("inw %0, %1": : "a"(u16Val), "Nd"(IoPort));
+                        u32Data = u16Val;
+                        break;
+                    }
+                    case 4:
+                    {
+                        uint32_t u32Val = 0;
+                        asm volatile ("inl %0, %1": : "a"(u32Val), "Nd"(IoPort));
+                        u32Data = u32Val;
+                        break;
+                    }
+                    default:
+                        break;
+
+                    *(volatile uint32_t *)&pMbx->u.IoPort.u32Val = u32Data;
+                }
+                break;
+            }
+            case X86STUBMBXREQ_IOPORT_WRITE:
+            {
+                uint16_t IoPort = (uint16_t)Req.u.IoPort.u32IoPort;
+
+                switch (Req.u.IoPort.cbAccess)
+                {
+                    case 1:
+                    {
+                        uint8_t bVal = (uint8_t)Req.u.IoPort.u32Val;
+                        asm volatile ("outb %0, %1": : "a"(bVal), "Nd"(IoPort));
+                        break;
+                    }
+                    case 2:
+                    {
+                        uint16_t u16Val = (uint16_t)Req.u.IoPort.u32Val;
+                        asm volatile ("outw %0, %1": : "a"(u16Val), "Nd"(IoPort));
+                        break;
+                    }
+                    case 4:
+                    {
+                        uint32_t u32Val = (uint32_t)Req.u.IoPort.u32Val;
+                        asm volatile ("outl %0, %1": : "a"(u32Val), "Nd"(IoPort));
+                        break;
+                    }
+                    default:
+                        break;
+                }
+                break;
+            }
+            default:
+                /* Do nothing */
+                break;
+        }
+
+        /* Mark that processing is done, response data is in the mailbox and we are ready to accept new requests. */
+        asm volatile ("wbinvd");
+        pMbx->u32MagicReqResp = X86STUB_MBX_MAGIC_READY;
+        asm volatile ("wbinvd");
+    }
 }
 

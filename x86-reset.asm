@@ -39,16 +39,16 @@ _gdt_data:
     dw 0xffff                   ; Limit
     dw 0                        ; Base address
     db 0
-    db 10010010b
-    db 11001111b
+    db 0x93
+    db 0xcf
     db 0x0
     ; Code segment
 _gdt_code:
     dw 0xffff                   ; Limit
     dw 0                        ; Base address
     db 0
-    db 10011010b
-    db 11001111b
+    db 0x9b
+    db 0xcf
     db 0x0
 _gdt_end:
 
@@ -61,7 +61,9 @@ DATASEG equ _gdt_data - _gdt
 
 _start:
     cli                         ; Disable interrupts
-    lgdt [_gdt_desc]            ; Load GDT
+    mov ebx, dword _gdt_desc
+    db 0x66
+    lgdt [cs:bx]                ; Load GDT
     xor ax, ax                  ; Clear AX
     mov ss, ax                  ; Load stack segment selector
     mov ds, ax                  ; Load data segment selector
@@ -72,7 +74,12 @@ _start:
     mov eax, cr0                ; Load CR0 into EAX
     or eax, 0x1                 ; Enable protected mode
     mov cr0, eax                ; Write back CR0
-    jmp CODESEG:_protected_mode ; Do a far jump to protected mode, this will load CS
+
+    ; far jmp CODESEG:_protected_mode ; Do a far jump to protected mode, this will load CS
+    ; @todo How to add the 32bit override prefix with yasm?
+    db 0x66, 0xea
+    dd _protected_mode
+    dw CODESEG
 
 ; Entering protected mode
 BITS 32
@@ -92,7 +99,11 @@ _protected_mode:
 
 ; The reset vector section so the linker can place it at the right location
 SECTION .reset_vector
+BITS 16
 
 _reset:
         jmp _start
+        dq 0                    ; Pad remaining space with 0 (@todo Find a more elegant solution)
+        dw 0
+        db 0, 0, 0
 

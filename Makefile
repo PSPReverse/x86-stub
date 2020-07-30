@@ -24,7 +24,7 @@
 # SOFTWARE.
 #
 
-CFLAGS=-m32 -O2 -DIN_X86_STUB -g -std=gnu99 -fomit-frame-pointer -nostartfiles -nostdlib -ffreestanding -Wextra -Werror
+CFLAGS=-m32 -O2 -DIN_X86_STUB -g -std=gnu99 -Ipsp-includes -fomit-frame-pointer -nostartfiles -nostdlib -ffreestanding -Wextra -Werror
 LIBGCC=$(shell gcc -print-libgcc-file-name)
 LDFLAGS=$(LIBGCC)
 
@@ -46,8 +46,8 @@ x86-reset.o: x86-reset.asm
 	yasm -f elf -m x86 -g dwarf2 -o $@ $^
 
 x86-stub.elf : x86-stub.ld x86-reset.o $(OBJS)
-	ld -melf_i386 -Map=x86-stub.map -T $^ -o $@ $(LDFLAGS)
+	ld -nostdlib -nostartfiles -static -melf_i386 -Map=x86-stub.map -T $^ -o $@ $(LDFLAGS)
 
 x86-stub.raw: x86-stub.elf
-	objcopy -O binary $^ $@
+	objcopy -O binary --keep-section reset_vector $^ $@
 
