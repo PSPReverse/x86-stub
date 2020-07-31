@@ -25,13 +25,13 @@
  */
 MEMORY
 {
-    RAM : ORIGIN = 0xffff0000, LENGTH = 64K
+    RAM : ORIGIN = 0x09ff0000, LENGTH = 64K
 }
 
 
 SECTIONS
 {
-    . = 0xffff0000;
+    . = 0x09ff0000;
 
     .rodata ALIGN(0x10):
     {
@@ -59,8 +59,33 @@ SECTIONS
         *(.text*);
     } > RAM
 
+    .text ALIGN(0x10):
+    {
+        *(.text);
+        *(.text*);
+    } > RAM
+
+    .stack ALIGN(64):
+    {
+        _x86_stub_stack_base = .;
+        . += 0x2000;
+        _x86_stub_stack_top = .;
+    }
+
+    /* The protected mode GDT comes here. */
+    .gdt ALIGN(0x10):
+    {
+        *(.gdt);
+    } > RAM
+
+    /* Real to protected mode switching code comes here. */
+    .rm2pm ALIGN(0x10):
+    {
+        *(.rm2pm);
+    } > RAM
+
     /* Reset vector goes here. */
-    . = 0xfffffff0;
+    . = 0x09fffff0;
 
     .reset_vector ALIGN(0x10):
     {
