@@ -59,6 +59,7 @@ void _c_start(void)
     PX86STUBMBX pMbx = (PX86STUBMBX)(uintptr_t)X86_STUB_MBX_START;
 
     pMbx->u32MagicReqResp = X86STUB_MBX_MAGIC_READY;
+    asm volatile ("wbinvd");
 
     for (;;)
     {
@@ -81,21 +82,21 @@ void _c_start(void)
                     case 1:
                     {
                         uint8_t bVal = 0;
-                        asm volatile ("inb %0, %1": : "a"(bVal), "Nd"(IoPort));
+                        asm volatile ("inb %w1, %b0": "=a"(bVal) : "Nd"(IoPort));
                         u32Data = bVal;
                         break;
                     }
                     case 2:
                     {
                         uint16_t u16Val = 0;
-                        asm volatile ("inw %0, %1": : "a"(u16Val), "Nd"(IoPort));
+                        asm volatile ("inw %w1, %w0": "=a"(u16Val) : "Nd"(IoPort));
                         u32Data = u16Val;
                         break;
                     }
                     case 4:
                     {
                         uint32_t u32Val = 0;
-                        asm volatile ("inl %0, %1": : "a"(u32Val), "Nd"(IoPort));
+                        asm volatile ("inl %w1, %0": "=a"(u32Val) : "Nd"(IoPort));
                         u32Data = u32Val;
                         break;
                     }
@@ -115,19 +116,19 @@ void _c_start(void)
                     case 1:
                     {
                         uint8_t bVal = (uint8_t)Req.u.IoPort.u32Val;
-                        asm volatile ("outb %0, %1": : "a"(bVal), "Nd"(IoPort));
+                        asm volatile ("outb %b1, %w0": : "Nd"(IoPort), "a"(bVal));
                         break;
                     }
                     case 2:
                     {
                         uint16_t u16Val = (uint16_t)Req.u.IoPort.u32Val;
-                        asm volatile ("outw %0, %1": : "a"(u16Val), "Nd"(IoPort));
+                        asm volatile ("outw %w1, %w0": : "Nd"(IoPort), "a"(u16Val));
                         break;
                     }
                     case 4:
                     {
                         uint32_t u32Val = (uint32_t)Req.u.IoPort.u32Val;
-                        asm volatile ("outl %0, %1": : "a"(u32Val), "Nd"(IoPort));
+                        asm volatile ("outl %1, %w0": : "Nd"(IoPort), "a"(u32Val));
                         break;
                     }
                     default:

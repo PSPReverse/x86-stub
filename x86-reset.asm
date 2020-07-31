@@ -24,12 +24,27 @@
 ; SOFTWARE.
 ;
 
+EXTERN _x86_stub_stack_top
 EXTERN _c_start
 SECTION .text
 
-; We start in real mode.
-BITS 16
+; Entering protected mode
+BITS 32
 CPU 80386
+
+_protected_mode:
+    mov ax, DATASEG              ; Initialize the segment selectors
+    mov ds, ax
+    mov es, ax
+    mov fs, ax
+    mov gs, ax
+    mov ss, ax
+
+    mov esp, _x86_stub_stack_top ; Set stack pointer
+
+    call _c_start                ; Call into the C startup routine
+
+SECTION .gdt
 
 ; Our GDT
 _gdt:
@@ -59,6 +74,12 @@ _gdt_desc:
 CODESEG equ _gdt_code - _gdt
 DATASEG equ _gdt_data - _gdt
 
+SECTION .rm2pm
+
+; We start in real mode.
+BITS 16
+CPU 80386
+
 _start:
     cli                         ; Disable interrupts
     mov ebx, dword _gdt_desc
@@ -80,22 +101,6 @@ _start:
     db 0x66, 0xea
     dd _protected_mode
     dw CODESEG
-
-; Entering protected mode
-BITS 32
-
-_protected_mode:
-    mov ax, DATASEG             ; Initialize the segment selectors
-    mov ds, ax
-    mov es, ax
-    mov fs, ax
-    mov gs, ax
-    mov ss, ax
-
-    mov esp, _reset             ; Set stack pointer
-    sub esp, 48                 ; Align pointer to a 64byte cache line (reset vector occupies top 16bits)
-
-    call _c_start               ; Call into the C startup routine
 
 ; The reset vector section so the linker can place it at the right location
 SECTION .reset_vector
