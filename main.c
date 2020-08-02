@@ -160,6 +160,27 @@ void _c_start(void)
                 }
                 break;
             }
+            case X86STUBMBXREQ_MSR_READ:
+            {
+                uint32_t idMsr = pMbx->u.Msr.idMsr;
+                uint32_t idKey = pMbx->u.Msr.idKey;
+                uint32_t u32ValLow = 0;
+                uint32_t u32ValHigh = 0;
+
+                asm volatile ("rdmsr": "=a"(u32ValLow), "=d"(u32ValHigh) : "c"(idMsr), "D"(idKey));
+                pMbx->u.Msr.u64Val = ((uint64_t)u32ValHigh << 32) | u32ValLow;
+                break;
+            }
+            case X86STUBMBXREQ_MSR_WRITE:
+            {
+                uint32_t idMsr = pMbx->u.Msr.idMsr;
+                uint32_t idKey = pMbx->u.Msr.idKey;
+                uint32_t u32ValLow = (uint32_t)pMbx->u.Msr.u64Val;
+                uint32_t u32ValHigh = (uint32_t)(pMbx->u.Msr.u64Val >> 32);
+
+                asm volatile ("wrmsr": : "a"(u32ValLow), "d"(u32ValHigh), "c"(idMsr), "D"(idKey));
+                break;
+            }
             default:
                 /* Do nothing */
                 break;

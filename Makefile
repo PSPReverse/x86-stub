@@ -24,7 +24,7 @@
 # SOFTWARE.
 #
 
-CFLAGS=-m32 -O2 -DIN_X86_STUB -g -std=gnu99 -fno-pic -fno-pie -Ipsp-includes -fomit-frame-pointer -nostartfiles -nostdlib -ffreestanding -Wextra -Werror
+CFLAGS=-m32 -O2 -DIN_X86_STUB -g -std=gnu99 -mno-mmx -mno-sse -fno-pic -fno-pie -Ipsp-includes -fomit-frame-pointer -nostartfiles -nostdlib -ffreestanding -Wextra -Werror
 LIBGCC=$(shell gcc -print-libgcc-file-name)
 LDFLAGS=
 

@@ -41,6 +41,7 @@ _protected_mode:
     mov ss, ax
 
     mov esp, _x86_stub_stack_top ; Set stack pointer
+    mov ebp, esp
 
     call _c_start                ; Call into the C startup routine
 
